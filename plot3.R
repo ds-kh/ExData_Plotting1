@@ -1,0 +1,37 @@
+if (!file.exists("household_power_consumption.txt")) {
+  url <- "http://d396qusza40orc.cloudfront.net/exdata%2Fdata%2Fhousehold_power_consumption.zip"
+  download.file(url, destfile = "power_data.zip")
+  unzip("power_data.zip")
+}
+
+install.packages("sqldf")
+library(sqldf)
+
+# Read filtered data (only 1/2/2007 and 2/2/2007)
+data <- read.csv.sql("household_power_consumption.txt",
+                     sql = "SELECT * FROM file WHERE Date IN ('1/2/2007', '2/2/2007')",
+                     sep = ";",
+                     header = TRUE)
+# Replace '?' strings manually with NA
+data[data == "?"] <- NA
+
+cols_to_convert <- names(data)[3:9]
+data[cols_to_convert] <- lapply(data[cols_to_convert], function(x) as.numeric(as.character(x)))
+
+data$Date <- as.Date(data$Date, format = "%d/%m/%Y")
+data$datetime <- as.POSIXct(paste(data$Date, data$Time), format = "%Y-%m-%d %H:%M:%S")
+
+png("plot3.png", width = 480, height = 480)
+
+plot(data$datetime, data$Sub_metering_1, type = "l",
+     col = "black", ylab = "Energy sub metering")
+
+lines(data$datetime, data$Sub_metering_2, col = "red")
+lines(data$datetime, data$Sub_metering_3, col = "blue")
+
+legend("topright",
+       legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"),
+       col = c("black", "red", "blue"),
+       lty = 1)
+
+dev.off()
